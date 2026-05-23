@@ -8,16 +8,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import io.chepherd.rc.auth.AuthConfig
+import io.chepherd.rc.auth.TokenStore
 import io.chepherd.rc.style.ChepherdFont
 import io.chepherd.rc.style.ChepherdSpace
 import io.chepherd.rc.style.Palette
+import kotlinx.coroutines.launch
 
 @Composable
 fun SignInScreen(onSignedIn: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val ctx = LocalContext.current
+    val launcher = LocalAuthLauncher.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -43,9 +49,28 @@ fun SignInScreen(onSignedIn: () -> Unit) {
         Button(
             onClick = {
                 busy = true
-                // Wave 3 wires AppAuth here.
-                error = "AppAuth integration pending in Wave 3"
-                busy = false
+                error = null
+                scope.launch {
+                    try {
+                        val cfg = AuthConfig(
+                            idpBaseUrl = "https://id.openova.io",
+                            clientId = "chepherd-rc-android",
+                            redirectUri = "io.chepherd.rc://callback",
+                            scope = "openid profile email chepherd:rc",
+                        )
+                        val store = TokenStore(ctx)
+                        val coord = AuthCoordinator(ctx, cfg, store)
+                        coord.signIn(launcher)
+                        coord.dispose()
+                        onSignedIn()
+                    } catch (e: AuthCoordinatorError.Cancelled) {
+                        // user cancelled — no-op
+                    } catch (e: Throwable) {
+                        error = e.message ?: e::class.simpleName
+                    } finally {
+                        busy = false
+                    }
+                }
             },
             enabled = !busy,
             colors = ButtonDefaults.buttonColors(containerColor = Palette.logo, contentColor = Palette.background),

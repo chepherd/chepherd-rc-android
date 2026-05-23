@@ -6,12 +6,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import io.chepherd.rc.protocol.SessionState
+import io.chepherd.rc.protocol.VerdictPayload
 import io.chepherd.rc.style.ChepherdFont
 import io.chepherd.rc.style.ChepherdSpace
 import io.chepherd.rc.style.Palette
 
 @Composable
-fun SessionRow(session: SessionState) {
+fun SessionRow(
+    session: SessionState,
+    verdictHistory: List<VerdictPayload> = emptyList(),
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -40,6 +44,9 @@ fun SessionRow(session: SessionState) {
                 text = v.name,
                 style = ChepherdFont.bodyMono.copy(color = Palette.verdictColor(v.name), fontSize = ChepherdFont.sm),
             )
+        }
+        if (verdictHistory.isNotEmpty()) {
+            HistoryStrip(verdicts = verdictHistory)
         }
     }
 }

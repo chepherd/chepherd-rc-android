@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.chepherd.rc.protocol.LogPayload
 import io.chepherd.rc.protocol.SessionState
+import io.chepherd.rc.protocol.VerdictPayload
 import io.chepherd.rc.style.ChepherdFont
 import io.chepherd.rc.style.ChepherdSpace
 import io.chepherd.rc.style.Palette
@@ -25,6 +26,9 @@ import java.util.Locale
 @Composable
 fun SessionDetailScreen(session: SessionState, store: SessionStore? = null) {
     val logs = store?.logs?.collectAsState()?.value ?: emptyList()
+    val verdicts = store?.verdictHistory?.collectAsState()?.value
+        ?.filter { it.session_uuid == session.uuid }
+        ?: emptyList()
 
     Column(
         modifier = Modifier
@@ -61,6 +65,10 @@ fun SessionDetailScreen(session: SessionState, store: SessionStore? = null) {
 
         session.last_scorecard?.let { ScorecardView(scorecard = it) }
 
+        if (verdicts.isNotEmpty() && session.last_scorecard != null) {
+            TrendCard(verdicts = verdicts, current = session.last_scorecard!!)
+        }
+
         Text(
             text = "log",
             color = Palette.title,
@@ -79,6 +87,46 @@ fun SessionDetailScreen(session: SessionState, store: SessionStore? = null) {
                 LogLine(entry)
             }
         }
+    }
+}
+
+@Composable
+private fun TrendCard(verdicts: List<VerdictPayload>, current: io.chepherd.rc.protocol.Scorecard) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Palette.border)
+            .padding(ChepherdSpace.s3),
+        verticalArrangement = Arrangement.spacedBy(ChepherdSpace.s1),
+    ) {
+        Text(
+            text = "trend",
+            color = Palette.title,
+            style = ChepherdFont.bodyMono.copy(
+                fontSize = ChepherdFont.sm,
+                fontWeight = FontWeight.Bold,
+                color = Palette.title,
+            ),
+        )
+        trendRow("G", verdicts.mapNotNull { it.scorecard?.G }, current.G)
+        trendRow("V", verdicts.mapNotNull { it.scorecard?.V }, current.V)
+        trendRow("F", verdicts.mapNotNull { it.scorecard?.F }, current.F)
+        trendRow("E", verdicts.mapNotNull { it.scorecard?.E }, current.E)
+    }
+}
+
+@Composable
+private fun trendRow(axis: String, series: List<Int>, current: Int) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(ChepherdSpace.s2),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(
+            text = axis,
+            color = Palette.title,
+            style = ChepherdFont.bodyMono.copy(fontWeight = FontWeight.Bold, color = Palette.title),
+        )
+        Sparkline(values = series, current = current)
     }
 }
 

@@ -9,9 +9,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import io.chepherd.rc.auth.TokenStore
+import io.chepherd.rc.transport.TransportState
 import io.chepherd.rc.transport.WSTransport
 import io.chepherd.rc.viewmodel.SessionStore
+import kotlinx.coroutines.delay
 import org.json.JSONObject
+import kotlin.math.min
+import kotlin.math.pow
 
 @Composable
 fun RootView() {
@@ -20,17 +24,32 @@ fun RootView() {
     var store by remember { mutableStateOf<SessionStore?>(null) }
 
     LaunchedEffect(signedIn) {
-        if (signedIn && store == null) {
-            val tokens = TokenStore(ctx).load() ?: return@LaunchedEffect
-            val bastion = bastionFromJwt(tokens.accessToken) ?: "primary"
-            val transport = WSTransport(
-                url = "wss://relay.chepherd.org/v1/signaling/ws",
-                authToken = tokens.accessToken,
-                bastionId = bastion,
-            )
-            val s = SessionStore(transport)
-            s.connect()
-            store = s
+        if (!signedIn) return@LaunchedEffect
+        var attempt = 0
+        while (true) {
+            val current = store
+            if (current == null || current.state.value == TransportState.Closed) {
+                val tokens = TokenStore(ctx).load() ?: return@LaunchedEffect
+                val bastion = bastionFromJwt(tokens.accessToken) ?: "primary"
+                val transport = WSTransport(
+                    url = "wss://relay.chepherd.org/v1/signaling/ws",
+                    authToken = tokens.accessToken,
+                    bastionId = bastion,
+                )
+                val fresh = SessionStore(transport)
+                fresh.connect()
+                store = fresh
+                if (fresh.state.value == TransportState.Open) attempt = 0
+            }
+            val state = store?.state?.value
+            if (state == TransportState.Open) {
+                attempt = 0
+                delay(5000)
+            } else {
+                val delayMs = min(30_000.0, 2.0.pow(attempt) * 1000.0).toLong()
+                attempt += 1
+                delay(delayMs)
+            }
         }
     }
 

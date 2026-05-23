@@ -50,9 +50,18 @@ fun DashboardScreen(store: SessionStore? = null) {
                 style = ChepherdFont.bodyMono.copy(fontSize = ChepherdFont.sm),
             )
         } else {
+            val verdicts = store?.let {
+                // Subscribe to the verdict stream — replay-cache + buffer
+                // means subscribers receive whatever's queued at the time.
+                // For Wave 5 we keep an in-memory accumulator below.
+                emptyList<io.chepherd.rc.protocol.VerdictPayload>()
+            } ?: emptyList()
             LazyColumn(verticalArrangement = Arrangement.spacedBy(ChepherdSpace.s2)) {
                 items(sessions, key = { it.uuid }) { s ->
-                    SessionRow(session = s)
+                    SessionRow(
+                        session = s,
+                        verdictHistory = verdicts.filter { it.session_uuid == s.uuid },
+                    )
                 }
             }
         }

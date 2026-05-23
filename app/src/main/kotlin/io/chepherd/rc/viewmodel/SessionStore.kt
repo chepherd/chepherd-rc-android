@@ -44,6 +44,11 @@ class SessionStore(private val transport: Transport) : ViewModel() {
     private val _verdicts = MutableSharedFlow<VerdictPayload>(replay = 0, extraBufferCapacity = 64)
     val verdicts: SharedFlow<VerdictPayload> = _verdicts.asSharedFlow()
 
+    /** Ring-buffered accumulator of recent verdicts (cap = verdictRingSize)
+     *  — used by the UI for the HistoryStrip filter. */
+    private val _verdictHistory = MutableStateFlow<List<VerdictPayload>>(emptyList())
+    val verdictHistory: StateFlow<List<VerdictPayload>> = _verdictHistory.asStateFlow()
+
     private val _logs = MutableStateFlow<List<LogPayload>>(emptyList())
     val logs: StateFlow<List<LogPayload>> = _logs.asStateFlow()
 
@@ -52,6 +57,7 @@ class SessionStore(private val transport: Transport) : ViewModel() {
 
     private val counter = SequenceCounter()
     private val logRingSize = 500
+    private val verdictRingSize = 100
 
     fun connect() {
         viewModelScope.launch {
@@ -117,7 +123,11 @@ class SessionStore(private val transport: Transport) : ViewModel() {
                         bytes.toString(Charsets.UTF_8),
                     )
                 } catch (_: Throwable) { return }
-                env.payload?.let { _verdicts.tryEmit(it) }
+                env.payload?.let { p ->
+                    _verdicts.tryEmit(p)
+                    val next = (_verdictHistory.value + p).takeLast(verdictRingSize)
+                    _verdictHistory.value = next
+                }
             }
             else -> {} // ack / ping / pong / error handled elsewhere
         }

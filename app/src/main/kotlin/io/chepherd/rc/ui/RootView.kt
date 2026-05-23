@@ -1,17 +1,60 @@
 package io.chepherd.rc.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import io.chepherd.rc.auth.TokenStore
+import io.chepherd.rc.transport.WSTransport
+import io.chepherd.rc.viewmodel.SessionStore
+import org.json.JSONObject
 
 @Composable
 fun RootView() {
-    var signedIn by remember { mutableStateOf(false) }
+    val ctx = LocalContext.current
+    var signedIn by remember { mutableStateOf(TokenStore(ctx).load() != null) }
+    var store by remember { mutableStateOf<SessionStore?>(null) }
+
+    LaunchedEffect(signedIn) {
+        if (signedIn && store == null) {
+            val tokens = TokenStore(ctx).load() ?: return@LaunchedEffect
+            val bastion = bastionFromJwt(tokens.accessToken) ?: "primary"
+            val transport = WSTransport(
+                url = "wss://relay.chepherd.org/v1/signaling/ws",
+                authToken = tokens.accessToken,
+                bastionId = bastion,
+            )
+            val s = SessionStore(transport)
+            s.connect()
+            store = s
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            // Coroutines are scoped to the ViewModel; nothing extra to clean up.
+        }
+    }
+
     if (signedIn) {
-        DashboardScreen()
+        DashboardScreen(store = store)
     } else {
         SignInScreen(onSignedIn = { signedIn = true })
     }
+}
+
+private fun bastionFromJwt(jwt: String): String? {
+    val parts = jwt.split(".")
+    if (parts.size < 2) return null
+    val payload = parts[1].padEnd((parts[1].length + 3) / 4 * 4, '=')
+        .replace('-', '+').replace('_', '/')
+    val data = try {
+        android.util.Base64.decode(payload, android.util.Base64.DEFAULT)
+    } catch (_: Throwable) { return null }
+    val obj = try { JSONObject(String(data)) } catch (_: Throwable) { return null }
+    return obj.optString("chepherd_bastion", null) ?: obj.optString("bid", null)
 }

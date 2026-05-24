@@ -38,9 +38,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate gradle wrapper jar
+      - name: Install gradle-wrapper.jar (direct fetch)
         run: |
-          gradle wrapper --gradle-version 8.10.2 --distribution-type bin --no-daemon
+          # Download the canonical gradle-wrapper.jar directly from
+          # gradle's git repo. Avoids `gradle wrapper` which evaluates
+          # the project's plugins block + pulls AGP transitive deps
+          # from Maven Central — that path tripped on intermittent
+          # 403 Forbidden in CI run 26347845751.
+          mkdir -p gradle/wrapper
+          curl -fL --retry 5 --retry-delay 5 \
+            -o gradle/wrapper/gradle-wrapper.jar \
+            https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar
+          ls -la gradle/wrapper/
 
       - name: Cache gradle
         uses: actions/cache@v4

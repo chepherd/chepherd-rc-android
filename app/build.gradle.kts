@@ -41,4 +41,9 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     debugImplementation(libs.compose.tooling)
+
+    // AppAuth — :app's AuthCoordinator.kt drives the OAuth2 flow
+    // directly via net.openid.appauth.AuthorizationService. core:auth
+    // exposes the protocol helpers but not the Service/Request classes.
+    implementation(libs.appauth)
 }

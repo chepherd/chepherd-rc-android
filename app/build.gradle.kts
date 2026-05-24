@@ -13,6 +13,10 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.0.1"
+        // AppAuth requires this placeholder so its own manifest entries
+        // (the redirect-handler activity) get the same scheme our
+        // io.chepherd.rc://callback OAuth2 redirect uses.
+        manifestPlaceholders["appAuthRedirectScheme"] = "io.chepherd.rc"
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }

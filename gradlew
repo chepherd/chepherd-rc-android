@@ -190,4 +190,7 @@ eval "set -- $(
         tr '\n' ' '
     )" '"$@"'
 
-exec "$JAVACMD" "$@"
+# Invoke the GradleWrapperMain entry point via -classpath. Without
+# this, java treats the first arg (e.g. ':app:assembleDebug') as the
+# main class name + fails with 'Could not find or load main class'.
+exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"

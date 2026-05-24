@@ -46,4 +46,13 @@ dependencies {
     // directly via net.openid.appauth.AuthorizationService. core:auth
     // exposes the protocol helpers but not the Service/Request classes.
     implementation(libs.appauth)
+    // OkHttp — :app's RootView + AuthCoordinator instantiate OkHttpClient
+    // directly (the shared transport HTTP client). core:transport uses
+    // it internally but doesn't expose it on the api classpath.
+    implementation(libs.okhttp)
+    // kotlinx.serialization runtime — SessionStore.kt decodes envelopes
+    // from kotlinx-serialization-generated @Serializable shapes in
+    // :core:protocol. Runtime only — :app doesn't apply the codegen
+    // plugin (only :core:protocol does).
+    implementation(libs.kotlinx.serialization.json)
 }

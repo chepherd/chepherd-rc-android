@@ -106,7 +106,7 @@ object Auth {
                 accessToken = j.getString("access_token"),
                 refreshToken = j.getString("refresh_token"),
                 expiresAt = System.currentTimeMillis() / 1000 + j.getInt("expires_in") - 30,
-                idToken = j.optString("id_token", null),
+                idToken = if (j.isNull("id_token") || !j.has("id_token")) null else j.optString("id_token"),
             )
         } catch (t: Throwable) {
             throw AuthError.DecodeFailed(t.message ?: t::class.simpleName ?: "unknown")

@@ -75,5 +75,11 @@ private fun bastionFromJwt(jwt: String): String? {
         android.util.Base64.decode(payload, android.util.Base64.DEFAULT)
     } catch (_: Throwable) { return null }
     val obj = try { JSONObject(String(data)) } catch (_: Throwable) { return null }
-    return obj.optString("chepherd_bastion", null) ?: obj.optString("bid", null)
+    return optStr(obj, "chepherd_bastion") ?: optStr(obj, "bid")
+}
+
+private fun optStr(obj: JSONObject, key: String): String? {
+    if (!obj.has(key) || obj.isNull(key)) return null
+    val v = obj.optString(key)
+    return v.ifEmpty { null }
 }

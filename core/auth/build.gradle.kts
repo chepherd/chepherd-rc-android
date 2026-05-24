@@ -18,4 +18,5 @@ dependencies {
     implementation(libs.appauth)
     implementation(libs.security.crypto)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.okhttp)
 }

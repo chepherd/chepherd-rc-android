@@ -9,8 +9,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@android:style/Theme.DeviceDefault"
         android:allowBackup="false"
-        android:fullBackupContent="false"
-        android:dataExtractionRules="@xml/data_extraction_rules">
+        android:fullBackupContent="false">
         <activity
             android:name=".ChepherdActivity"
             android:exported="true"

@@ -75,7 +75,12 @@ class HTTPSignaling(private val cfg: HTTPSignalingConfig) : SignalingClient {
     }
 
     override fun recvCandidates(bastionId: String): Flow<RemoteCandidate> = callbackFlow {
-        val job = kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+        // Inline-launch via launch{}, scoped to the callbackFlow's coroutine
+        // scope (the receiver of callbackFlow IS a CoroutineScope). This
+        // avoids the DelicateCoroutinesApi opt-in that GlobalScope would
+        // require under Kotlin 2.0 + ensures cancellation propagates from
+        // the consumer to this loop automatically.
+        val job = launch(Dispatchers.IO) {
             try {
                 while (!isClosedForSend) {
                     try {
